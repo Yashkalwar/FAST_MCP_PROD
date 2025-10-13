@@ -1,0 +1,74 @@
+# RBAC Policy Configuration - Defines roles, scopes, and access rules
+# Main functions: role-to-scope mapping, allow/deny rules with conditions
+# Flow: check scopes -> evaluate rules -> allow/deny + confirmation requirements
+
+version: 1
+roles:
+  agent: ["tools.invoke:read", "tools.query:catalog"]
+  finance-write: ["ads.write", "tools.invoke:write"]
+  sales-write: ["pipedrive.write", "tools.invoke:write"]
+  data-analyst: ["database.read", "database.execute", "tools.invoke:write"]
+  data-admin: ["database.read", "database.execute", "database.write", "tools.invoke:write"]
+  mcp-user: ["mcp.filesystem", "mcp.database", "mcp.git", "tools.invoke:write"]
+  mcp-admin: ["mcp.*", "tools.invoke:write"]
+
+rules:
+  - id: catalog-visibility
+    effect: allow
+    when:
+      action: catalog:list
+
+  - id: invoke-ads-create
+    effect: allow
+    when:
+      action: tools.invoke
+      resource.toolId: "ads:createCampaign"
+      subject.roles: ["finance-write"]
+
+  - id: invoke-pipedrive-create
+    effect: allow
+    when:
+      action: tools.invoke
+      resource.toolId: "pipedrive:createDeal"
+      subject.roles: ["sales-write"]
+
+  - id: invoke-database-list-tables
+    effect: allow
+    when:
+      action: tools.invoke
+      resource.toolId: "database:listTables"
+      subject.roles: ["data-analyst", "data-admin"]
+
+  - id: invoke-database-get-schema
+    effect: allow
+    when:
+      action: tools.invoke
+      resource.toolId: "database:getSchema"
+      subject.roles: ["data-analyst", "data-admin"]
+
+  - id: invoke-database-execute-query
+    effect: allow
+    when:
+      action: tools.invoke
+      resource.toolId: "database:executeQuery"
+      subject.roles: ["data-analyst", "data-admin"]
+
+  - id: invoke-mcp-tools
+    effect: allow
+    when:
+      action: tools.invoke
+      resource.provider_id: "mcp"
+      subject.roles: ["mcp-user", "mcp-admin"]
+
+
+  - id: safety-destroy-requires-confirm
+    effect: allow
+    when:
+      action: tools.invoke
+      resource.safety_tags_any: ["financial", "destructive"]
+    require_confirmation: true
+
+  - id: tenant-isolation
+    effect: deny
+    when:
+      "resource.tenant != subject.tenant": true

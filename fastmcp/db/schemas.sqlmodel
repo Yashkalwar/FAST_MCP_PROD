@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import Column, DateTime, JSON, Text
+from sqlmodel import Field, SQLModel
+
+
+class Manifest(SQLModel, table=True):
+    toolId: str = Field(primary_key=True, index=True)
+    manifest: dict = Field(sa_column=Column(JSON))
+    tenant: str = Field(index=True)
+    provider_id: str = Field(index=True)
+
+
+class IdempotencyRecord(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    request_hash: str = Field(index=True)
+    response_hash: Optional[str] = None
+    response_body: Optional[str] = Field(default=None, sa_column=Column(Text))
+    status: str = Field(default="pending")
+    expires_at: datetime = Field(sa_column=Column(DateTime(timezone=False)))
+    tool_id: Optional[str] = Field(default=None, index=True)
+    tenant: Optional[str] = Field(default=None, index=True)
+    sub: Optional[str] = Field(default=None, index=True)
+
+
+class ConfirmationRequest(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    action_token: str = Field(index=True, unique=True)
+    request_hash: str = Field(index=True)
+    tool_id: str = Field(index=True)
+    sub: str = Field(index=True)
+    tenant: str = Field(index=True)
+    payload_hash: str
+    expires_at: datetime = Field(sa_column=Column(DateTime(timezone=False)))
+    confirmed_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=False)))
+
+
+class AuditEventRow(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    event_hash: str = Field(index=True, unique=True)
+    corr_id: str = Field(index=True)
+    ts: datetime = Field(sa_column=Column(DateTime(timezone=False)))
+    tenant: str = Field(index=True)
+    sub: str = Field(index=True)
+    action: str = Field(index=True)
+    tool_id: Optional[str] = Field(default=None, index=True)
