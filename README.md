@@ -1,6 +1,6 @@
 # FastMCP - Enterprise AI Agent Tool Orchestration Platform
 
-FastMCP is a production-ready orchestration platform for enterprise AI agent tooling. It provides secure, scalable, and auditable access to external tools and services through a unified API with enterprise-grade security, RBAC/ABAC enforcement, confirmation gates, token brokering, rate limiting, and immutable audit trails.
+FastMCP is a production-ready orchestration platform for enterprise AI agent tooling. It provides secure, scalable, and auditable access to external tools and services through a unified API with enterprise-grade security, RBAC/ABAC enforcement, confirmation gates, token brokering, rate limiting, and immutable audit trails..
 
 ## 🏗️ Architecture Overview
 
