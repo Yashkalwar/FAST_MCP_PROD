@@ -28,6 +28,7 @@ from fastmcp.providers import ads_provider  # noqa: F401 - ensure registration
 from fastmcp.providers import database_provider  # noqa: F401 - ensure registration
 from fastmcp.providers import mcp_provider  # noqa: F401 - ensure registration
 from fastmcp.providers import pipedrive_provider  # noqa: F401 - ensure registration
+from fastmcp.providers import filesystem_provider  # noqa: F401 - ensure registration
 
 
 def configure_logging() -> None:
@@ -85,6 +86,89 @@ SAMPLE_MANIFEST = {
     "latency_estimate_ms": 400,
     "tenant": "public",
     "examples": [{"input": {"name": "LaunchX", "budget": 1000, "startDate": "2025-10-10"}}],
+}
+
+
+FILESYSTEM_LIST_MANIFEST = {
+    "toolId": "filesystem:listDirectory",
+    "name": "List Directory",
+    "description": "List files and folders under a sandboxed root.",
+    "inputs": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "default": "/"},
+            "recursive": {"type": "boolean", "default": False},
+        },
+        "additionalProperties": False,
+    },
+    "outputs": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": ["entries", "count"],
+        "properties": {
+            "entries": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string"},
+                        "type": {"type": "string", "enum": ["file", "directory"]},
+                        "size": {"type": ["integer", "null"]},
+                        "modified": {"type": ["integer", "null"]},
+                    },
+                },
+            },
+            "count": {"type": "integer"},
+        },
+    },
+    "required_scopes": ["filesystem.read"],
+    "safety_tags": ["filesystem"],
+    "provider_id": "filesystem",
+    "tenant": "public",
+}
+
+FILESYSTEM_READ_MANIFEST = {
+    "toolId": "filesystem:readFile",
+    "name": "Read File",
+    "description": "Read a file under the sandboxed root.",
+    "inputs": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+            "path": {"type": "string"},
+            "as_base64": {"type": "boolean", "default": False},
+        },
+    },
+    "outputs": {"type": "object"},
+    "required_scopes": ["filesystem.read"],
+    "safety_tags": ["filesystem"],
+    "provider_id": "filesystem",
+    "tenant": "public",
+}
+
+FILESYSTEM_WRITE_MANIFEST = {
+    "toolId": "filesystem:writeFile",
+    "name": "Write File",
+    "description": "Write a file under the sandboxed root (text or base64).",
+    "inputs": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+            "path": {"type": "string"},
+            "content": {"type": ["string", "null"], "description": "UTF-8 text content"},
+            "encoding": {"type": "string", "default": "utf-8"},
+            "content_base64": {"type": ["string", "null"], "description": "Base64 binary content"},
+            "overwrite": {"type": "boolean", "default": False},
+        },
+    },
+    "outputs": {"type": "object"},
+    "required_scopes": ["filesystem.write"],
+    "safety_tags": ["filesystem", "destructive"],
+    "provider_id": "filesystem",
+    "tenant": "public",
 }
 
 PIPEDRIVE_MANIFEST = {
@@ -267,7 +351,6 @@ async def discover_and_seed_mcp_tools() -> None:
                         )
                     )
             session.commit()
-            
         logger.info("mcp_discovery.complete", tools_discovered=len(discovered_tools))
         
     except Exception as e:
@@ -340,6 +423,20 @@ def seed_database() -> None:
                     provider_id=database_schema_manifest.provider_id,
                 )
             )
+
+        # Seed filesystem manifests
+        for fs_manifest_dict in (FILESYSTEM_LIST_MANIFEST, FILESYSTEM_READ_MANIFEST, FILESYSTEM_WRITE_MANIFEST):
+            fs_manifest = ToolManifest(**fs_manifest_dict)
+            existing_fs = session.get(Manifest, fs_manifest.toolId)
+            if not existing_fs:
+                session.add(
+                    Manifest(
+                        toolId=fs_manifest.toolId,
+                        manifest=fs_manifest.model_dump(),
+                        tenant=fs_manifest.tenant,
+                        provider_id=fs_manifest.provider_id,
+                    )
+                )
         session.commit()
 
 

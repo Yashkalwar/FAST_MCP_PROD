@@ -11,6 +11,8 @@ roles:
   data-admin: ["database.read", "database.execute", "database.write", "tools.invoke:write"]
   mcp-user: ["mcp.filesystem", "mcp.database", "mcp.git", "tools.invoke:write"]
   mcp-admin: ["mcp.*", "tools.invoke:write"]
+  fs-reader: ["filesystem.read", "tools.invoke:write"]
+  fs-writer: ["filesystem.read", "filesystem.write", "tools.invoke:write"]
 
 rules:
   - id: catalog-visibility
@@ -59,6 +61,20 @@ rules:
       action: tools.invoke
       resource.provider_id: "mcp"
       subject.roles: ["mcp-user", "mcp-admin"]
+
+  - id: invoke-filesystem-read
+    effect: allow
+    when:
+      action: tools.invoke
+      resource.toolId_in: ["filesystem:listDirectory", "filesystem:readFile"]
+      subject.roles: ["fs-reader", "fs-writer"]
+
+  - id: invoke-filesystem-write
+    effect: allow
+    when:
+      action: tools.invoke
+      resource.toolId: "filesystem:writeFile"
+      subject.roles: ["fs-writer"]
 
 
   - id: safety-destroy-requires-confirm
