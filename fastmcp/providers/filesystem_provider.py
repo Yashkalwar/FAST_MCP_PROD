@@ -24,6 +24,11 @@ class FilesystemProviderAdapter(ProviderAdapter):
         self.root.mkdir(parents=True, exist_ok=True)
         logger.info("filesystem_provider.init", root=str(self.root))
 
+    # Token exchange (filesystem doesn't need external tokens)
+    async def exchange(self, scopes: list[str], subject: str, tenant: str, purpose: str) -> dict:
+        """Filesystem provider doesn't require external token exchange."""
+        return {"token_type": "none", "provider": self.provider_id}
+
     # Tool router
     async def call(self, endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         if endpoint == "listDirectory":
