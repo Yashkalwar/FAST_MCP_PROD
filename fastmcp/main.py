@@ -13,6 +13,7 @@ from typing import Any, Dict
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer
 from sqlmodel import SQLModel, Session, select
 
 from fastmcp.api.routes_catalog import router as catalog_router
@@ -47,7 +48,17 @@ def configure_logging() -> None:
 settings = get_settings()
 configure_logging()
 
-app = FastAPI(title=settings.APP_NAME, version="0.1.0")
+# Configure security scheme for Swagger UI
+security = HTTPBearer()
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    version="0.1.0",
+    description="Enterprise AI Agent Tool Orchestration Platform with RBAC, confirmation gates, and audit trails.",
+    swagger_ui_parameters={
+        "persistAuthorization": True,
+    }
+)
 
 app.include_router(internal_router)
 app.include_router(catalog_router)
