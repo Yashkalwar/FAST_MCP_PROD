@@ -48,17 +48,27 @@ def configure_logging() -> None:
 settings = get_settings()
 configure_logging()
 
-# Configure security scheme for Swagger UI
-security = HTTPBearer()
-
 app = FastAPI(
     title=settings.APP_NAME,
     version="0.1.0",
     description="Enterprise AI Agent Tool Orchestration Platform with RBAC, confirmation gates, and audit trails.",
-    swagger_ui_parameters={
-        "persistAuthorization": True,
-    }
+    swagger_ui_parameters={"persistAuthorization": True},
 )
+
+# Add JWT Bearer security to Swagger UI
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    from fastapi.openapi.utils import get_openapi
+    openapi_schema = get_openapi(title=app.title, version=app.version, description=app.description, routes=app.routes)
+    openapi_schema.setdefault("components", {})["securitySchemes"] = {
+        "HTTPBearer": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}
+    }
+    openapi_schema["security"] = [{"HTTPBearer": []}]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
 
 app.include_router(internal_router)
 app.include_router(catalog_router)
